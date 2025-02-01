@@ -8,22 +8,39 @@ app = Flask(__name__)
 interpreter = tflite.Interpreter(model_path="wildfire_model.tflite")
 interpreter.allocate_tensors()
 
+# Get input and output details
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
+
+@app.route('/')
+def home():
+    return jsonify({"message": "Server is running!"})
 
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
-        data = request.json['data']  # Expecting a list of sensor values
-        input_data = np.array(data, dtype=np.float32).reshape(1, -1)
+        # Get JSON data from request
+        data = request.get_json()
+        if not data or "features" not in data:
+            return jsonify({"error": "Missing 'features' key in request body"}), 400
+        
+        # Convert input to numpy array and reshape
+        input_data = np.array(data["features"], dtype=np.float32).reshape(1, -1)
 
+        # Set input tensor
         interpreter.set_tensor(input_details[0]['index'], input_data)
         interpreter.invoke()
-        prediction = interpreter.get_tensor(output_details[0]['index'])[0].tolist()
 
-        return jsonify({'prediction': prediction})
+        # Get output tensor
+        output_data = interpreter.get_tensor(output_details[0]['index'])
+
+        # Convert output to a readable format
+        prediction = output_data.tolist()  # Assuming output is a probability list
+
+        return jsonify({"prediction": prediction})
+    
     except Exception as e:
-        return jsonify({'error': str(e)})
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
