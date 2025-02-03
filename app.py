@@ -23,9 +23,11 @@ def predict():
         data = request.get_json()
         if not data or "features" not in data:
             return jsonify({"error": "Missing 'features' key in request body"}), 400
-        
+
         # Convert input to numpy array and reshape
         input_data = np.array(data["features"], dtype=np.float32).reshape(1, -1)
+
+        print("Received input data:", input_data)  # ✅ Debugging step
 
         # Set input tensor
         interpreter.set_tensor(input_details[0]['index'], input_data)
@@ -33,14 +35,16 @@ def predict():
 
         # Get output tensor
         output_data = interpreter.get_tensor(output_details[0]['index'])
+        print("Raw Model Output:", output_data)  # ✅ Debugging step
 
         # Convert output to a readable format
-        prediction = output_data.tolist()  # Assuming output is a probability list
+        prediction = output_data.tolist()
 
         return jsonify({"prediction": prediction})
-    
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
